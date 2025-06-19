@@ -2,22 +2,13 @@ import { useState, useEffect, useRef, useContext } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-    HiUser,
-    HiShoppingCart,
-    HiSearch,
-    HiX,
-    HiStar,
-    HiClock,
-    HiHome,
-    HiOfficeBuilding,
-    HiClipboardList,
-    HiLogout,
-    HiEye,
-    HiPlus
+    HiUser, HiShoppingCart, HiSearch, HiX, HiStar, HiClock, HiHome,
+    HiOfficeBuilding, HiClipboardList, HiLogout, HiEye, HiPlus
 } from 'react-icons/hi';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import LoadingPage from './LoadingPage'; // Adjust path as needed
 
 const HomePage = () => {
     const location = useLocation();
@@ -38,6 +29,8 @@ const HomePage = () => {
     const [popularItems, setPopularItems] = useState([]);
     const [categories, setCategories] = useState(['All Categories']);
     const errorMessageRef = useRef(null);
+    const [loading, setLoading] = useState(true); // Initial loading state
+    const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag for initial load
 
     const processFoodCourts = (restaurantsData) => {
         const fetchedFoodCourts = [...restaurantsData].map((restaurant, index) => ({
@@ -51,7 +44,7 @@ const HomePage = () => {
             name: restaurant.restaurantname,
             image: restaurant.image,
             isOpen: restaurant.availability,
-            rating: parseFloat(restaurant.rating.toFixed(1)), // Round to 1 decimal
+            rating: parseFloat(restaurant.rating.toFixed(1)),
             time: '20-30 min',
             court: restaurant.restaurantname,
         }));
@@ -70,7 +63,7 @@ const HomePage = () => {
             price: item.dineinPrice,
             description: item.description,
             isAvailable: item.availability,
-            rating: parseFloat(item.rating.toFixed(1)), // Round to 1 decimal
+            rating: parseFloat(item.rating.toFixed(1)),
         }));
         setPopularItems(fetchedItems);
 
@@ -86,7 +79,6 @@ const HomePage = () => {
             ]);
             if (response.data.success) {
                 const updatedRestaurants = processFoodCourts(response.data.restaurants);
-                // Check if selectedFoodCourt is closed
                 if (selectedFoodCourt) {
                     const currentCourt = updatedRestaurants.find(
                         restaurant => restaurant.name === selectedFoodCourt.name
@@ -115,11 +107,38 @@ const HomePage = () => {
         }
     };
 
+    // Initial load
     useEffect(() => {
-        fetchData();
-        const interval = setInterval(fetchData, 5000); // Poll every 5 seconds
-        return () => clearInterval(interval);
-    }, [selectedFoodCourt]); // Re-run when selectedFoodCourt changes
+        const loadInitialData = async () => {
+            try {
+                setLoading(true);
+                await fetchData();
+            } catch (error) {
+                console.error('Initial load error:', error);
+            } finally {
+                setLoading(false);
+                setIsInitialLoad(false); // Mark initial load as complete
+            }
+        };
+        loadInitialData();
+    }, []);
+
+    // Polling without affecting loading state
+    useEffect(() => {
+        const pollData = async () => {
+            const interval = setInterval(async () => {
+                try {
+                    await fetchData();
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 5000);
+            return () => clearInterval(interval);
+        };
+        if (!isInitialLoad) {
+            pollData(); // Start polling only after initial load
+        }
+    }, [isInitialLoad]);
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -195,7 +214,6 @@ const HomePage = () => {
             return;
         }
 
-        // Client-side check for food court consistency
         if (cartItems.length > 0) {
             const existingCourt = cartItems[0]?.restaurant;
             if (existingCourt && item.court !== existingCourt) {
@@ -262,8 +280,12 @@ const HomePage = () => {
                 item.name.toLowerCase().includes(searchQuery.toLowerCase())
             )
             : popularItems
-                .sort((a, b) => (b.rating || 0) - (a.rating || 0)) // Sort by rating descending
-                .slice(0, 10); // Top 10 rated items
+                .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+                .slice(0, 10);
+
+    if (loading) {
+        return <LoadingPage />; // Show LoadingPage only during initial load
+    }
 
     return (
         <div className="min-h-screen bg-white">
@@ -386,7 +408,6 @@ const HomePage = () => {
             </nav>
 
             <div style={{ paddingBottom: 'calc(3.57rem + env(safe-area-inset-bottom))' }} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-20 md:pb-6">
-
                 <div className="mb-8">
                     <div className="relative max-w-md mx-auto">
                         <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

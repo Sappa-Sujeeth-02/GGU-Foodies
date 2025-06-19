@@ -7,6 +7,7 @@ import { HiStar, HiClock, HiShoppingBag } from 'react-icons/hi';
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import LoadingPage from './LoadingPage'; // Adjust path as needed
 
 const LandingPage = () => {
     const [currentSlide, setCurrentSlide] = useState(0);
@@ -18,6 +19,7 @@ const LandingPage = () => {
     const [fetchError, setFetchError] = useState('');
     const scrollRef = useRef(null);
     const [scrollDirection, setScrollDirection] = useState('right');
+    const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag for initial load
 
     useEffect(() => {
         if (isLoggedIn) {
@@ -45,7 +47,7 @@ const LandingPage = () => {
                     category: item.category,
                     price: item.dineinPrice,
                     isAvailable: item.availability,
-                    rating: item.rating || 0, // Ensure rating is defined
+                    rating: item.rating || 0,
                 }));
                 console.log('Processed Food Items:', processedFoodItems);
                 setPopularItems(processedFoodItems);
@@ -53,14 +55,14 @@ const LandingPage = () => {
                 const processedFoodCourts = [...restaurants].map((restaurant, index) => {
                     const restaurantItems = processedFoodItems
                         .filter(item => item.court === restaurant.restaurantname && item.isAvailable)
-                        .sort((a, b) => (b.rating || 0) - (a.rating || 0)) // Sort by rating descending
-                        .slice(0, 5); // Top 5 rated items
+                        .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+                        .slice(0, 5);
                     return {
                         id: index + 1,
                         name: restaurant.restaurantname,
                         description: `A delightful food court at ${restaurant.address}.`,
                         image: restaurant.image,
-                        rating: parseFloat(restaurant.rating.toFixed(1)), // Round to 1 decimal
+                        rating: parseFloat(restaurant.rating.toFixed(1)),
                         isOpen: restaurant.availability,
                         specialties: restaurantItems.length > 0 ? restaurantItems.map(item => item.name) : ['No items available'],
                     };
@@ -78,21 +80,38 @@ const LandingPage = () => {
         }
     };
 
+    // Initial load
     useEffect(() => {
-        const loadData = async () => {
+        const loadInitialData = async () => {
             try {
                 setLoading(true);
                 await fetchData();
             } catch (error) {
-                console.error('Error in loadData:', error);
+                console.error('Initial load error:', error);
             } finally {
                 setLoading(false);
+                setIsInitialLoad(false); // Mark initial load as complete
             }
         };
-        loadData();
-        const interval = setInterval(fetchData, 5000);
-        return () => clearInterval(interval);
+        loadInitialData();
     }, []);
+
+    // Polling without affecting loading state
+    useEffect(() => {
+        const pollData = async () => {
+            const interval = setInterval(async () => {
+                try {
+                    await fetchData();
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 5000);
+            return () => clearInterval(interval);
+        };
+        if (!isInitialLoad) {
+            pollData(); // Start polling only after initial load
+        }
+    }, [isInitialLoad]);
 
     useEffect(() => {
         const timer = setInterval(() => {
@@ -140,11 +159,7 @@ const LandingPage = () => {
     };
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-            </div>
-        );
+        return <LoadingPage />; // Use the separate LoadingPage component
     }
 
     return (
@@ -323,9 +338,9 @@ const LandingPage = () => {
                             style={{ scrollBehavior: 'smooth' }}
                         >
                             {popularItems
-                                .sort((a, b) => (b.rating || 0) - (a.rating || 0)) // Sort by rating descending
-                                .slice(0, 10) // Top 10 rated items
-                                .concat(popularItems.slice(0, 10)) // Duplicate for seamless scrolling
+                                .sort((a, b) => (b.rating || 0) - (a.rating || 0))
+                                .slice(0, 10)
+                                .concat(popularItems.slice(0, 10))
                                 .map((item, index) => (
                                     <div
                                         key={index}
