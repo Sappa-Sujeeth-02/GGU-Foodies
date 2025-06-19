@@ -4,6 +4,7 @@ import { HiCheck, HiClock, HiX, HiArrowLeft } from 'react-icons/hi';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
 import toast from 'react-hot-toast';
+import LoadingPage from './LoadingPage'; // Adjust path as needed
 
 const Orders = () => {
     const { isLoggedIn } = useContext(AuthContext);
@@ -11,6 +12,7 @@ const Orders = () => {
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState('pending');
     const navigate = useNavigate();
+    const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag for initial load
 
     const fetchOrders = async () => {
         try {
@@ -25,18 +27,40 @@ const Orders = () => {
         }
     };
 
+    // Initial load
     useEffect(() => {
         if (!isLoggedIn) return;
 
         const loadOrders = async () => {
-            setLoading(true);
-            await fetchOrders();
-            setLoading(false);
+            try {
+                setLoading(true);
+                await fetchOrders();
+            } catch (error) {
+                console.error('Initial load error:', error);
+            } finally {
+                setLoading(false);
+                setIsInitialLoad(false); // Mark initial load as complete
+            }
         };
         loadOrders();
-        const interval = setInterval(fetchOrders, 5000); // Poll every 5 seconds
-        return () => clearInterval(interval);
     }, [isLoggedIn]);
+
+    // Polling without affecting loading state
+    useEffect(() => {
+        if (!isLoggedIn || isInitialLoad) return;
+
+        const pollOrders = async () => {
+            const interval = setInterval(async () => {
+                try {
+                    await fetchOrders();
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 5000);
+            return () => clearInterval(interval);
+        };
+        pollOrders();
+    }, [isLoggedIn, isInitialLoad]);
 
     const formatDate = (dateString) => {
         const options = { year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
@@ -98,11 +122,7 @@ const Orders = () => {
     }
 
     if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-600"></div>
-            </div>
-        );
+        return <LoadingPage />; // Use the separate LoadingPage component
     }
 
     if (orders.length === 0) {

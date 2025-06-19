@@ -14,6 +14,7 @@ import {
 import toast from 'react-hot-toast';
 import axios from 'axios';
 import { AuthContext } from '../context/AuthContext';
+import LoadingPage from './LoadingPage'; // Adjust path as needed
 
 const CartPage = () => {
     const { cartItems, updateCart } = useContext(AuthContext);
@@ -22,17 +23,24 @@ const CartPage = () => {
     const [showPayment, setShowPayment] = useState(false);
     const [acceptedRules, setAcceptedRules] = useState(false);
     const [foodItems, setFoodItems] = useState([]); // Store food items with takeawayPrice
+    const [loading, setLoading] = useState(true); // Initial loading state
+    const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag for initial load
 
     // Fetch food items to get takeawayPrice
     useEffect(() => {
         const fetchFoodItems = async () => {
             try {
+                setLoading(true);
                 const response = await axios.get('https://ggufoodies-backend.onrender.com/api/restaurant/all-food-items');
                 if (response.data.success) {
                     setFoodItems(response.data.foodItems);
                 }
             } catch (error) {
                 console.error('Failed to fetch food items:', error);
+                toast.error('Failed to load food items');
+            } finally {
+                setLoading(false);
+                setIsInitialLoad(false); // Mark initial load as complete
             }
         };
         fetchFoodItems();
@@ -150,6 +158,10 @@ const CartPage = () => {
             )
         }
     ];
+
+    if (loading) {
+        return <LoadingPage />; // Use the separate LoadingPage component
+    }
 
     if (cartItems.length === 0) {
         return (

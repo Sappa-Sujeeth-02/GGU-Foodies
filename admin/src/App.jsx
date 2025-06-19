@@ -8,9 +8,9 @@ import Layout from './components/admincomponents/Layout/Layout';
 import Dashboard from './pages/adminpages/Dashboard';
 import AllRestaurants from './pages/adminpages/AllRestaurants';
 import AddRestaurant from './pages/adminpages/AddRestaurant';
-import AdminPanel from './pages/Login/AdminPanel';
-import AdminLogin from './pages/Login/AdminLogin';
-import RestaurantLogin from './pages/Login/RestaurantLogin';
+import AdminPanel from './pages/LogIn/AdminPanel';
+import AdminLogin from './pages/LogIn/AdminLogin';
+import RestaurantLogin from './pages/LogIn/RestaurantLogin';
 
 // Restaurant Panel Components
 import { AppProvider } from './components/restaurantscomponents/AppContext';

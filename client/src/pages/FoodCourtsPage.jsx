@@ -17,6 +17,7 @@ import {
 import { AuthContext } from '../context/AuthContext';
 import axios from 'axios';
 import toast from 'react-hot-toast';
+import LoadingPage from './LoadingPage'; // Adjust path as needed
 
 const FoodCourtsPage = () => {
     const navigate = useNavigate();
@@ -26,6 +27,8 @@ const FoodCourtsPage = () => {
     const [userName, setUserName] = useState('');
     const [foodCourts, setFoodCourts] = useState([]);
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(true); // Initial loading state
+    const [isInitialLoad, setIsInitialLoad] = useState(true); // Flag for initial load
 
     const processFoodCourts = (restaurantsData) => {
         const restaurants = [...restaurantsData].map((restaurant, index) => ({
@@ -58,7 +61,21 @@ const FoodCourtsPage = () => {
         }
     };
 
+    // Initial load
     useEffect(() => {
+        const loadInitialData = async () => {
+            try {
+                setLoading(true);
+                await fetchFoodCourts();
+            } catch (error) {
+                console.error('Initial load error:', error);
+            } finally {
+                setLoading(false);
+                setIsInitialLoad(false); // Mark initial load as complete
+            }
+        };
+        loadInitialData();
+
         const fetchUserProfile = async () => {
             try {
                 const token = localStorage.getItem('token');
@@ -72,11 +89,24 @@ const FoodCourtsPage = () => {
             }
         };
         fetchUserProfile();
-
-        fetchFoodCourts();
-        const interval = setInterval(fetchFoodCourts, 5000); // Poll every 5 seconds
-        return () => clearInterval(interval);
     }, []);
+
+    // Polling without affecting loading state
+    useEffect(() => {
+        const pollData = async () => {
+            const interval = setInterval(async () => {
+                try {
+                    await fetchFoodCourts();
+                } catch (error) {
+                    console.error('Polling error:', error);
+                }
+            }, 5000);
+            return () => clearInterval(interval);
+        };
+        if (!isInitialLoad) {
+            pollData(); // Start polling only after initial load
+        }
+    }, [isInitialLoad]);
 
     const clearSearch = () => {
         setSearchQuery('');
@@ -107,6 +137,10 @@ const FoodCourtsPage = () => {
             court.name.toLowerCase().includes(searchQuery.toLowerCase())
         )
         : foodCourts;
+
+    if (loading) {
+        return <LoadingPage />; // Use the separate LoadingPage component
+    }
 
     return (
         <div className="min-h-screen bg-white">
@@ -229,7 +263,6 @@ const FoodCourtsPage = () => {
             </nav>
 
             <div style={{ paddingBottom: 'calc(3.57rem + env(safe-area-inset-bottom))' }} className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pt-10 pb-20 md:pb-6">
-
                 <div className="mb-8">
                     <div className="flex items-center space-x-2 mb-4">
                         <button
